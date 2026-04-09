@@ -32,6 +32,7 @@ class ProgressionService {
   static const _keyBestCombo = 'rt_best_combo';
   static const _keySoundEnabled = 'rt_sound_enabled';
   static const _keyHapticsEnabled = 'rt_haptics_enabled';
+  static const _keyTutorialSeen = 'rt_tutorial_seen';
 
   int totalScore = 0;
   String activeThemeId = 'purple';
@@ -51,6 +52,7 @@ class ProgressionService {
 
   bool soundEnabled = true;
   bool hapticsEnabled = true;
+  bool tutorialSeen = false;
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -84,6 +86,7 @@ class ProgressionService {
     bestComboEver = prefs.getInt(_keyBestCombo) ?? 0;
     soundEnabled = prefs.getBool(_keySoundEnabled) ?? true;
     hapticsEnabled = prefs.getBool(_keyHapticsEnabled) ?? true;
+    tutorialSeen = prefs.getBool(_keyTutorialSeen) ?? false;
 
     _syncUnlocks(prefs);
   }
@@ -246,6 +249,12 @@ class ProgressionService {
     hapticsEnabled = val;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyHapticsEnabled, val);
+  }
+
+  Future<void> markTutorialSeen() async {
+    tutorialSeen = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyTutorialSeen, true);
   }
 
   String _todayKey() {

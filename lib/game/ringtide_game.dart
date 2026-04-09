@@ -213,12 +213,20 @@ class RingtideGame extends FlameGame with TapCallbacks {
     _usedContinue = false;
     _buildRings();
     AudioService.startBgm();
-    phase = GamePhase.tutorial;
-    overlays.add('TutorialHint');
+
+    if (ProgressionService.instance.tutorialSeen) {
+      // Skip straight to game
+      phase = GamePhase.playing;
+      overlays.add('GameHUD');
+    } else {
+      phase = GamePhase.tutorial;
+      overlays.add('TutorialHint');
+    }
   }
 
   void startGame() {
     overlays.remove('TutorialHint');
+    ProgressionService.instance.markTutorialSeen();
     phase = GamePhase.playing;
     overlays.add('GameHUD');
   }
