@@ -47,15 +47,14 @@ class RingComponent extends PositionComponent {
     return (1 - (diff / pi)).clamp(0.0, 1.0);
   }
 
-  /// Called when ball arrives at this ring's radius.
-  /// Returns true if ball passes through the gap.
-  bool isBallAligned() {
-    final diff = _angleDiff(_gapAngle, GameConstants.aimLaunchAngle);
+  /// Returns true if ball travelling at [ballAngle] passes through the gap.
+  bool isBallAligned(double ballAngle) {
+    final diff = _angleDiff(_gapAngle, ballAngle);
     return diff.abs() < gapSize / 2;
   }
 
-  bool isBallPerfect() {
-    final diff = _angleDiff(_gapAngle, GameConstants.aimLaunchAngle);
+  bool isBallPerfect(double ballAngle) {
+    final diff = _angleDiff(_gapAngle, ballAngle);
     return diff.abs() < GameConstants.perfectThreshold;
   }
 

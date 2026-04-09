@@ -28,7 +28,7 @@ class S {
   static String get tutorialLine1 =>
       _tr ? 'Halka dönüyor — halkada bir boşluk var' : 'The ring spins — it has a gap';
   static String get tutorialLine2 =>
-      _tr ? 'Boşluk ▼ nişanına gelince dokun, top fırlar' : 'Tap when the gap aligns with ▼ to shoot the ball';
+      _tr ? 'Boşluğun olduğu yöne dokun — top oradan fırlar' : 'Tap toward the gap — the ball shoots that way';
   static String get tutorialLine3 =>
       _tr ? 'Top boşluktan geçerse puan\nHalkaya çarparsa oyun bitti' : 'Ball through the gap = score\nBall hits the ring = game over';
 

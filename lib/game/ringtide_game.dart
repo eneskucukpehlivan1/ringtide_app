@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -156,14 +157,6 @@ class RingtideGame extends FlameGame with TapCallbacks {
     if (phase != GamePhase.playing) return;
     _orb.updateCombo(combo);
 
-    // Combined alignment: min proximity across all rings.
-    // When all gaps are near the aim angle, aim lane glows.
-    if (_rings.isNotEmpty) {
-      final combined = _rings
-          .map((r) => r.proximityToAim)
-          .reduce((a, b) => a < b ? a : b);
-      _aimLane.alignment = combined;
-    }
   }
 
   // ── Input ──────────────────────────────────────────────────────────────────
@@ -175,38 +168,38 @@ class RingtideGame extends FlameGame with TapCallbacks {
         startGame();
         return;
       case GamePhase.playing:
-        _launchBall();
+        _launchBall(event.canvasPosition);
         return;
       default:
         return;
     }
   }
 
-  void _launchBall() {
+  void _launchBall(Vector2 tapPos) {
     if (_ballsInFlight >= GameConstants.maxBallsInFlight) return;
     if (_rings.isEmpty) return;
 
     _ballsInFlight++;
 
-    // Capture gap alignment at the moment of launch for each ring
-    // (ball travels, so we snapshot angles now and predict where they'll be)
-    // For simplicity: check gap alignment when ball *arrives* at each ring radius
-    // We pass live closures so the ring is checked at arrival time
+    final center = size / 2;
+    final angle = atan2(tapPos.y - center.y, tapPos.x - center.x);
     final radii = _rings.map((r) => r.radius).toList();
-    final checks = _rings.map((r) => r.isBallAligned).toList();
-    final perfChecks = _rings.map((r) => r.isBallPerfect).toList();
+    final checks = _rings
+        .map((r) => (double a) => r.isBallAligned(a))
+        .toList();
 
     final ball = BallComponent(
-      origin: size / 2,
+      origin: center,
+      launchAngle: angle,
       ringRadii: radii,
       gapChecks: checks,
-      onResult: (miss, hitRadius) => _onBallResult(miss, hitRadius, perfChecks),
+      onResult: (miss, hitRadius) => _onBallResult(miss, hitRadius, angle),
       color: activeTheme.accentColor,
     );
     add(ball);
   }
 
-  void _onBallResult(bool miss, double hitRadius, List<bool Function()> perfChecks) {
+  void _onBallResult(bool miss, double hitRadius, double ballAngle) {
     _ballsInFlight--;
 
     if (miss) {
@@ -214,8 +207,7 @@ class RingtideGame extends FlameGame with TapCallbacks {
       return;
     }
 
-    // Ball passed — check how many rings and if all were perfect
-    final allPerfect = perfChecks.every((f) => f());
+    final allPerfect = _rings.every((r) => r.isBallPerfect(ballAngle));
     tapsCount++;
     combo++;
     if (combo > maxCombo) maxCombo = combo;
