@@ -24,10 +24,10 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-4848727887390601~2829760816</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This identifier helps us show you relevant ads and keeps the game free to play.</string>
 	<key>SKAdNetworkItems</key>
@@ -67,11 +67,6 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
 </dict>
 </plist>
