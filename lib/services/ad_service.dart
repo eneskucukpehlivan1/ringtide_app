@@ -7,11 +7,10 @@ class AdService {
   AdService._();
   static final AdService instance = AdService._();
 
-  // Test IDs — replace before publishing
-  static const _interstitialAndroid = 'ca-app-pub-3940256099942544/1033173712';
-  static const _interstitialIOS = 'ca-app-pub-3940256099942544/4411468910';
-  static const _rewardedAndroid = 'ca-app-pub-3940256099942544/5224354917';
-  static const _rewardedIOS = 'ca-app-pub-3940256099942544/1712485313';
+  static const _interstitialAndroid = 'ca-app-pub-4848727887390601/7425715010';
+  static const _interstitialIOS     = 'ca-app-pub-4848727887390601/7425715010';
+  static const _rewardedAndroid     = 'ca-app-pub-4848727887390601/5320192789';
+  static const _rewardedIOS         = 'ca-app-pub-4848727887390601/5320192789';
 
   InterstitialAd? _interstitialAd;
   RewardedAd? _rewardedAd;
