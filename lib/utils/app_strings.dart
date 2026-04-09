@@ -26,11 +26,11 @@ class S {
 
   // Tutorial
   static String get tutorialLine1 =>
-      _tr ? 'Halka sürekli dönüyor — halkada bir boşluk var' : 'The ring keeps spinning — it has a gap';
+      _tr ? 'Halka dönüyor — halkada bir boşluk var' : 'The ring spins — it has a gap';
   static String get tutorialLine2 =>
-      _tr ? 'Boşluk yukarıdaki ▼ işaretine geldiğinde dokun' : 'Tap when the gap reaches the ▼ marker at the top';
+      _tr ? 'Boşluk ▼ nişanına gelince dokun, top fırlar' : 'Tap when the gap aligns with ▼ to shoot the ball';
   static String get tutorialLine3 =>
-      _tr ? 'Tam zamanında: MÜKEMMEL bonus\nErken/geç: kaçırdın, oyun bitti' : 'Right on time: PERFECT bonus\nToo early/late: miss, game over';
+      _tr ? 'Top boşluktan geçerse puan\nHalkaya çarparsa oyun bitti' : 'Ball through the gap = score\nBall hits the ring = game over';
 
   // Combo / perfect
   static String get perfect => _tr ? 'MÜKEMMEL!' : 'PERFECT!';

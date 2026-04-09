@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +10,7 @@ import 'components/background_component.dart';
 import 'components/ring_component.dart';
 import 'components/center_orb.dart';
 import 'components/tap_marker.dart';
+import 'components/ball_component.dart';
 import 'components/particle_burst.dart';
 import 'components/perfect_label.dart';
 
@@ -28,9 +28,10 @@ class RingtideGame extends FlameGame with TapCallbacks {
   int _gamesSinceAd = 0;
   bool _canContinue = true;
   bool _usedContinue = false;
+  int _ballsInFlight = 0;
 
   late CenterOrb _orb;
-  late TapMarker _marker;
+  late TapMarker _aimLane;
   final List<RingComponent> _rings = [];
 
   GameTheme get activeTheme => ProgressionService.instance.activeTheme;
@@ -45,11 +46,12 @@ class RingtideGame extends FlameGame with TapCallbacks {
     _orb = CenterOrb(center: size / 2, color: activeTheme.accentColor);
     await add(_orb);
 
-    _marker = TapMarker(
-      position: _markerPosition(1),
+    _aimLane = TapMarker(
+      center: size / 2,
       color: activeTheme.accentColor,
+      outerRadius: _outerRadius(1),
     );
-    await add(_marker);
+    await add(_aimLane);
 
     _buildRings();
     overlays.add('MainMenu');
@@ -63,25 +65,20 @@ class RingtideGame extends FlameGame with TapCallbacks {
     return 1;
   }
 
-  Vector2 _markerPosition(int numRings) {
-    final center = size / 2;
-    final baseRadius = size.x * GameConstants.ringRadiusRatio;
-    final outerRadius = baseRadius + (numRings - 1) * 28.0;
-    return Vector2(
-      center.x + cos(GameConstants.markerAngle) * (outerRadius + GameConstants.markerOffset),
-      center.y + sin(GameConstants.markerAngle) * (outerRadius + GameConstants.markerOffset),
-    );
-  }
+  double _baseRadius() => size.x * GameConstants.ringRadiusRatio;
+
+  double _outerRadius(int numRings) =>
+      _baseRadius() + (numRings - 1) * 28.0;
 
   void _buildRings() {
     for (final r in _rings) { r.removeFromParent(); }
     _rings.clear();
 
     final center = size / 2;
-    final baseRadius = size.x * GameConstants.ringRadiusRatio;
     final numRings = _ringCount();
     final gap = (GameConstants.initialGapSize -
-            (level ~/ 10) * GameConstants.gapDecrement)
+            (level ~/ GameConstants.levelsPerGapDecrement) *
+                GameConstants.gapDecrement)
         .clamp(GameConstants.minGapSize, GameConstants.initialGapSize);
     final baseSpeed = (GameConstants.initialSpeed +
             (level ~/ GameConstants.levelsPerSpeedIncrease) *
@@ -91,7 +88,8 @@ class RingtideGame extends FlameGame with TapCallbacks {
         (level ~/ GameConstants.levelsPerDirectionFlip) % 2 == 0 ? 1.0 : -1.0;
 
     for (int i = 0; i < numRings; i++) {
-      final radius = baseRadius + i * 28.0;
+      final radius = _baseRadius() + i * 28.0;
+      // Alternate ring directions for multi-ring challenge
       final ringSpeed = baseSpeed *
           (i == 0 ? 1.0 : (i.isEven ? 0.85 : -0.9)) *
           dirFlip;
@@ -106,7 +104,7 @@ class RingtideGame extends FlameGame with TapCallbacks {
       add(ring);
     }
 
-    _marker.position = _markerPosition(numRings);
+    _aimLane.updateRadius(_outerRadius(numRings));
   }
 
   // ── Update ─────────────────────────────────────────────────────────────────
@@ -115,11 +113,6 @@ class RingtideGame extends FlameGame with TapCallbacks {
   void update(double dt) {
     super.update(dt);
     if (phase != GamePhase.playing) return;
-
-    if (_rings.isNotEmpty) {
-      final prox = _rings.map((r) => r.proximityToMarker).reduce(max);
-      _marker.proximity = prox;
-    }
     _orb.updateCombo(combo);
   }
 
@@ -132,54 +125,69 @@ class RingtideGame extends FlameGame with TapCallbacks {
         startGame();
         return;
       case GamePhase.playing:
-        _handleTap();
+        _launchBall();
         return;
       default:
         return;
     }
   }
 
-  void _handleTap() {
+  void _launchBall() {
+    if (_ballsInFlight >= GameConstants.maxBallsInFlight) return;
     if (_rings.isEmpty) return;
 
-    bool anyMiss = false;
-    bool allPerfect = true;
+    _ballsInFlight++;
 
-    for (final ring in _rings) {
-      final result = ring.tryTap();
-      if (result == TapResult.miss) {
-        anyMiss = true;
-        allPerfect = false;
-        break;
-      }
-      if (result != TapResult.perfect) allPerfect = false;
-    }
+    // Capture gap alignment at the moment of launch for each ring
+    // (ball travels, so we snapshot angles now and predict where they'll be)
+    // For simplicity: check gap alignment when ball *arrives* at each ring radius
+    // We pass live closures so the ring is checked at arrival time
+    final radii = _rings.map((r) => r.radius).toList();
+    final checks = _rings.map((r) => r.isBallAligned).toList();
+    final perfChecks = _rings.map((r) => r.isBallPerfect).toList();
 
-    if (anyMiss) {
+    final ball = BallComponent(
+      origin: size / 2,
+      ringRadii: radii,
+      gapChecks: checks,
+      onResult: (miss, hitRadius) => _onBallResult(miss, hitRadius, perfChecks),
+      color: activeTheme.accentColor,
+    );
+    add(ball);
+  }
+
+  void _onBallResult(bool miss, double hitRadius, List<bool Function()> perfChecks) {
+    _ballsInFlight--;
+
+    if (miss) {
       _onMiss();
       return;
     }
 
-    for (final ring in _rings) { ring.flash(); }
-
+    // Ball passed — check how many rings and if all were perfect
+    final allPerfect = perfChecks.every((f) => f());
     tapsCount++;
     combo++;
     if (combo > maxCombo) maxCombo = combo;
+
+    // Flash rings
+    for (final ring in _rings) { ring.flash(); }
 
     int gained;
     if (allPerfect) {
       gained = GameConstants.perfectBase + combo * 2;
       AudioService.playPerfect();
-      _spawnFeedback(perfect: true);
     } else {
       gained = GameConstants.baseScore + (combo > 1 ? combo : 0);
       AudioService.playTap();
-      _spawnFeedback(perfect: false);
     }
     score += gained;
 
     if (combo >= 5 && combo % 5 == 0) AudioService.playCombo();
 
+    _spawnFeedback(perfect: allPerfect);
+
+    // Level up
     final newLevel = (score ~/ 50) + 1;
     if (newLevel > level) {
       level = newLevel;
@@ -200,12 +208,10 @@ class RingtideGame extends FlameGame with TapCallbacks {
   void _spawnFeedback({required bool perfect}) {
     final center = size / 2;
     add(ParticleBurst(center: center, color: activeTheme.ringColor, isPerfect: perfect));
-
     if (perfect || combo >= 2) {
       final label = combo >= 2 ? '🔥 x$combo' : 'PERFECT!';
-      final baseRadius = size.x * GameConstants.ringRadiusRatio;
       add(PerfectLabel(
-        position: Vector2(center.x, center.y - baseRadius - 45),
+        position: Vector2(center.x, center.y - _outerRadius(_ringCount()) - 50),
         text: label,
         color: activeTheme.accentColor,
       ));
@@ -220,6 +226,7 @@ class RingtideGame extends FlameGame with TapCallbacks {
     combo = 0;
     maxCombo = 0;
     tapsCount = 0;
+    _ballsInFlight = 0;
   }
 
   void startTutorial() {
@@ -241,20 +248,17 @@ class RingtideGame extends FlameGame with TapCallbacks {
 
   Future<void> _finishGame() async {
     overlays.remove('GameHUD');
-
     _gamesSinceAd++;
     if (_gamesSinceAd >= GameConstants.interstitialEvery) {
       _gamesSinceAd = 0;
       await AdService.instance.showInterstitial();
     }
-
     await ProgressionService.instance.addGameResult(
       score: score,
       level: level,
       maxCombo: maxCombo,
       tapsCount: tapsCount,
     );
-
     overlays.add('GameOver');
   }
 
@@ -272,6 +276,7 @@ class RingtideGame extends FlameGame with TapCallbacks {
     _canContinue = false;
     _usedContinue = true;
     combo = 0;
+    _ballsInFlight = 0;
     overlays.remove('GameOver');
     phase = GamePhase.playing;
     overlays.add('GameHUD');

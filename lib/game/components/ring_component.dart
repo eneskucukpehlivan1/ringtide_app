@@ -41,16 +41,16 @@ class RingComponent extends PositionComponent {
     _pulseTimer += dt;
   }
 
-  TapResult tryTap() {
-    final diff = _angleDiff(_gapAngle, GameConstants.markerAngle);
-    if (diff.abs() < GameConstants.perfectThreshold) return TapResult.perfect;
-    if (diff.abs() < gapSize / 2) return TapResult.success;
-    return TapResult.miss;
+  /// Called when ball arrives at this ring's radius.
+  /// Returns true if ball passes through the gap.
+  bool isBallAligned() {
+    final diff = _angleDiff(_gapAngle, GameConstants.aimLaunchAngle);
+    return diff.abs() < gapSize / 2;
   }
 
-  double get proximityToMarker {
-    final diff = _angleDiff(_gapAngle, GameConstants.markerAngle).abs();
-    return (1 - (diff / pi)).clamp(0.0, 1.0);
+  bool isBallPerfect() {
+    final diff = _angleDiff(_gapAngle, GameConstants.aimLaunchAngle);
+    return diff.abs() < GameConstants.perfectThreshold;
   }
 
   void flash() => _flashTimer = 0.18;

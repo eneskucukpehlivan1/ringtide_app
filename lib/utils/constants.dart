@@ -3,33 +3,36 @@ import 'dart:math';
 class GameConstants {
   // Ring
   static const double ringStrokeWidth = 8.0;
-  static const double ringRadiusRatio = 0.33; // fraction of min(w,h)
+  static const double ringRadiusRatio = 0.33;
   static const double glowBlur = 12.0;
 
-  // Gap
-  static const double initialGapSize = 1.22; // ~70 degrees in radians
-  static const double minGapSize = 0.58; // ~33 degrees
-  static const double gapDecrement = 0.12; // every 10 levels
-  static const double perfectThreshold = 0.17; // ~10 degrees
+  // Gap — tighter from the start
+  static const double initialGapSize = 0.90; // ~52 degrees
+  static const double minGapSize = 0.38;     // ~22 degrees
+  static const double gapDecrement = 0.09;   // every 8 levels
+  static const int levelsPerGapDecrement = 8;
+  static const double perfectThreshold = 0.14; // ~8 degrees
 
-  // Speed
-  static const double initialSpeed = 1.3; // rad/s
-  static const double speedIncrement = 0.13;
-  static const double maxSpeed = 4.8;
-  static const int levelsPerSpeedIncrease = 5;
+  // Speed — fast, keeps getting faster
+  static const double initialSpeed = 2.4;    // rad/s
+  static const double speedIncrement = 0.22;
+  static const double maxSpeed = 8.5;
+  static const int levelsPerSpeedIncrease = 3;
 
   // Direction flip
-  static const int levelsPerDirectionFlip = 15;
+  static const int levelsPerDirectionFlip = 12;
+
+  // Ball
+  static const double ballSpeed = 950.0;   // px per second
+  static const double ballRadius = 7.0;
+  static const int maxBallsInFlight = 1;
 
   // Scoring
   static const int baseScore = 5;
-  static const int perfectBase = 10;
-  static const int comboMultiplier = 3;
+  static const int perfectBase = 12;
 
-  // Marker
-  static const double markerAngle = -pi / 2; // 12 o'clock
-  static const double markerSize = 12.0;
-  static const double markerOffset = 22.0; // outside ring
+  // Aim lane
+  static const double aimLaunchAngle = -pi / 2; // straight up, 12 o'clock
 
   // Ads
   static const int interstitialEvery = 3;
