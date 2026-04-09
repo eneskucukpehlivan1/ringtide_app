@@ -18,6 +18,7 @@ class BallComponent extends Component {
   double _dist = 0;
   int _nextRing = 0;
   BallState _state = BallState.flying;
+  double _exitFade = 1.0; // 1→0 after passing all rings
 
   final List<_TrailDot> _trail = [];
   static const _trailLen = 12;
@@ -68,7 +69,11 @@ class BallComponent extends Component {
     if (_nextRing >= ringRadii.length && _state == BallState.flying) {
       _state = BallState.passed;
       onResult(false, ringRadii.last);
-      removeFromParent();
+    }
+
+    if (_state == BallState.passed) {
+      _exitFade -= dt * 4.5; // ~0.22s fade
+      if (_exitFade <= 0) removeFromParent();
     }
   }
 
@@ -117,18 +122,20 @@ class BallComponent extends Component {
 
     // Ball
     final pos = _ballPos();
+    final fade = _state == BallState.passed ? _exitFade.clamp(0.0, 1.0) : 1.0;
+    final scale = _state == BallState.passed ? (0.5 + 0.5 * fade) : 1.0;
     canvas.drawCircle(
         Offset(pos.x, pos.y),
-        GameConstants.ballRadius * 2.0,
+        GameConstants.ballRadius * 2.0 * scale,
         Paint()
-          ..color = color.withValues(alpha: 0.35)
+          ..color = color.withValues(alpha: 0.35 * fade)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
     canvas.drawCircle(
-        Offset(pos.x, pos.y), GameConstants.ballRadius,
-        Paint()..color = color.withValues(alpha: 0.95));
+        Offset(pos.x, pos.y), GameConstants.ballRadius * scale,
+        Paint()..color = color.withValues(alpha: 0.95 * fade));
     canvas.drawCircle(
-        Offset(pos.x - 2, pos.y - 2), GameConstants.ballRadius * 0.35,
-        Paint()..color = Colors.white.withValues(alpha: 0.6));
+        Offset(pos.x - 2, pos.y - 2), GameConstants.ballRadius * 0.35 * scale,
+        Paint()..color = Colors.white.withValues(alpha: 0.6 * fade));
   }
 }
 
