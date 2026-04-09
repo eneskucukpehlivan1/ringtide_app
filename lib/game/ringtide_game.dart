@@ -60,40 +60,115 @@ class RingtideGame extends FlameGame with TapCallbacks {
 
   // ── Ring management ────────────────────────────────────────────────────────
 
+  // Ring i enters the game when ring (i-1) reaches 1 gap.
+  // Ring 1 age = level - 1   → 1 gap at level 25
+  // Ring 2 age = level - 25  → 1 gap at level 49
+  // Ring 3 age = level - 49  → (endgame)
+  static const _ringEntryLevels = [1, 25, 49];
+
+  // Outer rings rotate slower so alignment windows are long.
+  static const _ringSpeedMults = [1.0, 0.20, 0.12];
+
+  int get _targetRingCount {
+    if (level >= _ringEntryLevels[2]) return 3;
+    if (level >= _ringEntryLevels[1]) return 2;
+    return 1;
+  }
+
   double _baseRadius() => size.x * GameConstants.ringRadiusRatio;
 
-  /// Creates the ring for the first time (call once from onLoad / reset).
+  double _radiusForIndex(int i) => _baseRadius() + i * 32.0;
+
+  // Gap count and size for ring i, based on that ring's "age" (levels since spawn).
+  int _gapCountForRing(int i) {
+    final age = (level - _ringEntryLevels[i]).clamp(0, level);
+    return GameConstants.gapCountForLevel(age + 1);
+  }
+
+  double _gapSizeForRing(int i) {
+    final age = (level - _ringEntryLevels[i]).clamp(0, level);
+    return GameConstants.gapSizeForLevel(age + 1);
+  }
+
+  double _speedForRing(int i) {
+    final dirFlip =
+        (level ~/ GameConstants.levelsPerDirectionFlip) % 2 == 0 ? 1.0 : -1.0;
+    return GameConstants.speedForLevel(level) * _ringSpeedMults[i] * dirFlip;
+  }
+
+  /// Creates all rings from scratch (reset / initial load).
   void _createRing() {
     for (final r in _rings) { r.removeFromParent(); }
     _rings.clear();
+    for (int i = 0; i < _targetRingCount; i++) {
+      _spawnRing(i);
+    }
+    _syncAimLane();
+  }
 
+  /// Spawns ring i; outer rings start with one gap aligned to ring 0.
+  void _spawnRing(int i) {
+    final initialAngle = i > 0 ? _rings.first.currentGapAngle : null;
     final ring = RingComponent(
       center: size / 2,
-      radius: _baseRadius(),
-      gapSize: GameConstants.gapSizeForLevel(level),
-      gapCount: GameConstants.gapCountForLevel(level),
-      speed: _ringSpeed(),
+      radius: _radiusForIndex(i),
+      gapSize: _gapSizeForRing(i),
+      gapCount: _gapCountForRing(i),
+      speed: _speedForRing(i),
       color: activeTheme.ringColor,
+      initialGapAngle: initialAngle,
     );
     _rings.add(ring);
     add(ring);
-    _aimLane.updateRadius(_baseRadius());
   }
 
-  /// Updates ring difficulty in-place — rotation keeps going uninterrupted.
-  void _updateRing() {
-    if (_rings.isEmpty) return;
-    _rings.first.configure(
-      newGapSize:  GameConstants.gapSizeForLevel(level),
-      newGapCount: GameConstants.gapCountForLevel(level),
-      newSpeed:    _ringSpeed(),
-    );
+  /// On level-up: updates existing rings in-place; spawns new ring if needed.
+  void _updateRings() {
+    // Add a new ring if the target count just increased
+    while (_rings.length < _targetRingCount) {
+      _spawnRing(_rings.length);
+      _syncAimLane();
+    }
+    // Update difficulty on all rings without interrupting rotation
+    for (int i = 0; i < _rings.length; i++) {
+      _rings[i].configure(
+        newGapSize:  _gapSizeForRing(i),
+        newGapCount: _gapCountForRing(i),
+        newSpeed:    _speedForRing(i),
+      );
+    }
   }
 
-  double _ringSpeed() {
-    final dirFlip =
-        (level ~/ GameConstants.levelsPerDirectionFlip) % 2 == 0 ? 1.0 : -1.0;
-    return GameConstants.speedForLevel(level) * dirFlip;
+  void _syncAimLane() =>
+      _aimLane.updateRadius(_radiusForIndex(_rings.length - 1));
+
+  // ── HUD helpers (read by GameHUD) ──────────────────────────────────────────
+
+  int get hudRingCount => _rings.length;
+
+  /// Gap count of the newest (outermost) ring — drives the HUD dots.
+  int get hudNewestGapCount {
+    if (_rings.isEmpty) return 4;
+    final i = _rings.length - 1;
+    return _gapCountForRing(i);
+  }
+
+  /// Levels until the newest ring loses a gap (0 = newest ring is at 1 gap).
+  int get hudLevelsToFewerGaps {
+    if (_rings.isEmpty) return 0;
+    final i = _rings.length - 1;
+    final age = (level - _ringEntryLevels[i]).clamp(0, level);
+    // Mirror the thresholds from gapCountForLevel
+    if (age < GameConstants.gapCount3Threshold - 1) {
+      return GameConstants.gapCount3Threshold - 1 - age;
+    }
+    if (age < GameConstants.gapCount2Threshold - 1) {
+      return GameConstants.gapCount2Threshold - 1 - age;
+    }
+    if (age < GameConstants.gapCount1Threshold - 1) {
+      return GameConstants.gapCount1Threshold - 1 - age;
+    }
+    return 0; // newest ring already at 1 gap
   }
 
   // ── Update ─────────────────────────────────────────────────────────────────
@@ -178,7 +253,7 @@ class RingtideGame extends FlameGame with TapCallbacks {
     final newLevel = (score ~/ 50) + 1;
     if (newLevel > level) {
       level = newLevel;
-      _updateRing();
+      _updateRings();
     }
 
     overlays.remove('GameHUD');

@@ -20,7 +20,8 @@ class RingComponent extends PositionComponent {
     required this.gapCount,
     required this.speed,
     required this.color,
-  })  : _gapAngle = -pi / 2 + pi / 4,
+    double? initialGapAngle,
+  })  : _gapAngle = initialGapAngle ?? (-pi / 2 + pi / 4),
         super(
           position: center,
           size: Vector2.all(radius * 2 + 40),
@@ -31,6 +32,7 @@ class RingComponent extends PositionComponent {
 
   late double _radius;
   double get radius => _radius;
+  double get currentGapAngle => _gapAngle;
 
   @override
   void update(double dt) {

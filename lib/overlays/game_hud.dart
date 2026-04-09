@@ -2,32 +2,18 @@ import 'package:flutter/material.dart';
 import '../game/ringtide_game.dart';
 import '../services/progression_service.dart';
 import '../utils/app_strings.dart';
-import '../utils/constants.dart';
 
 class GameHUD extends StatelessWidget {
   final RingtideGame game;
   const GameHUD({super.key, required this.game});
 
-  /// Levels remaining until gap count drops (0 = already at 1 gap).
-  int _levelsToFewerGaps(int level) {
-    if (level < GameConstants.gapCount3Threshold) {
-      return GameConstants.gapCount3Threshold - level;
-    }
-    if (level < GameConstants.gapCount2Threshold) {
-      return GameConstants.gapCount2Threshold - level;
-    }
-    if (level < GameConstants.gapCount1Threshold) {
-      return GameConstants.gapCount1Threshold - level;
-    }
-    return 0;
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = ProgressionService.instance.activeTheme;
-    final gapCount = GameConstants.gapCountForLevel(game.level);
-    final toNext = _levelsToFewerGaps(game.level);
-    final isHardest = gapCount <= 1;
+    final gapCount = game.hudNewestGapCount;
+    final toNext   = game.hudLevelsToFewerGaps;
+    final ringCount = game.hudRingCount;
+    final isHardest = gapCount <= 1 && ringCount >= 3;
 
     return IgnorePointer(
       child: SafeArea(
@@ -98,9 +84,10 @@ class GameHUD extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              // Bottom: gap countdown
+              // Bottom: gap + ring countdown
               _GapCountdown(
                 gapCount: gapCount,
+                ringCount: ringCount,
                 levelsLeft: toNext,
                 isHardest: isHardest,
                 color: theme.accentColor,
@@ -118,6 +105,7 @@ class GameHUD extends StatelessWidget {
 
 class _GapCountdown extends StatelessWidget {
   final int gapCount;
+  final int ringCount;
   final int levelsLeft;
   final bool isHardest;
   final Color color;
@@ -126,6 +114,7 @@ class _GapCountdown extends StatelessWidget {
 
   const _GapCountdown({
     required this.gapCount,
+    required this.ringCount,
     required this.levelsLeft,
     required this.isHardest,
     required this.color,
@@ -138,10 +127,21 @@ class _GapCountdown extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // 4 gap dots: filled = active gaps, hollow = removed
+        // Ring count dots (up to 3)
+        for (int i = 1; i <= 3; i++)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: _RingDot(
+              active: i <= ringCount,
+              color: color,
+              glowColor: glowColor,
+            ),
+          ),
+        const SizedBox(width: 8),
+        // 4 gap dots: filled = active gaps on newest ring
         for (int i = 4; i >= 1; i--)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 2),
             child: _GapDot(
               active: i <= gapCount,
               color: color,
@@ -185,6 +185,33 @@ class _GapCountdown extends StatelessWidget {
             ],
           ),
       ],
+    );
+  }
+}
+
+class _RingDot extends StatelessWidget {
+  final bool active;
+  final Color color;
+  final Color glowColor;
+  const _RingDot(
+      {required this.active, required this.color, required this.glowColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 12,
+      height: 12,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.transparent,
+        border: Border.all(
+          color: active ? color.withValues(alpha: 0.9) : color.withValues(alpha: 0.20),
+          width: active ? 2.5 : 1.5,
+        ),
+        boxShadow: active
+            ? [BoxShadow(color: glowColor.withValues(alpha: 0.6), blurRadius: 8, spreadRadius: 1)]
+            : [],
+      ),
     );
   }
 }
