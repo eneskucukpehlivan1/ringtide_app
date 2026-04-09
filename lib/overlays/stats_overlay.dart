@@ -119,11 +119,14 @@ class StatsOverlay extends StatelessWidget {
   }
 
   Widget _badgesSection(ProgressionService ps, dynamic theme) {
+    final isTr = S.isTr == 'tr';
     return Wrap(
       spacing: 10,
       runSpacing: 10,
       children: kBadges.map((b) {
         final earned = ps.earnedBadges.contains(b.id);
+        final badgeName = isTr ? b.nameTr : b.nameEn;
+        final badgeDesc = isTr ? b.descTr : b.descEn;
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.all(14),
@@ -147,14 +150,14 @@ class StatsOverlay extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(b.nameEn,
+                    Text(badgeName,
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                             color: earned
                                 ? (theme.accentColor as Color)
                                 : Colors.white.withValues(alpha: 0.3))),
-                    Text(b.descEn,
+                    Text(badgeDesc,
                         style: TextStyle(
                             fontSize: 12,
                             color: earned

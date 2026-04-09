@@ -76,14 +76,35 @@ class RingtideGame extends FlameGame with TapCallbacks {
 
     final center = size / 2;
     final numRings = _ringCount();
-    final gap = (GameConstants.initialGapSize -
-            (level ~/ GameConstants.levelsPerGapDecrement) *
+
+    // Each ring-count tier resets to easier values then ramps up independently.
+    // This way adding a ring feels like a fresh challenge, not a wall.
+    final int tierLevel;
+    final double tierGapBase;
+    final double tierSpeedBase;
+
+    if (numRings == 3) {
+      tierLevel   = level - 25;
+      tierGapBase   = GameConstants.tier3GapBase;
+      tierSpeedBase = GameConstants.tier3SpeedBase;
+    } else if (numRings == 2) {
+      tierLevel   = level - 12;
+      tierGapBase   = GameConstants.tier2GapBase;
+      tierSpeedBase = GameConstants.tier2SpeedBase;
+    } else {
+      tierLevel   = level - 1;
+      tierGapBase   = GameConstants.tier1GapBase;
+      tierSpeedBase = GameConstants.tier1SpeedBase;
+    }
+
+    final gap = (tierGapBase -
+            (tierLevel ~/ GameConstants.levelsPerGapDecrement) *
                 GameConstants.gapDecrement)
-        .clamp(GameConstants.minGapSize, GameConstants.initialGapSize);
-    final baseSpeed = (GameConstants.initialSpeed +
-            (level ~/ GameConstants.levelsPerSpeedIncrease) *
+        .clamp(GameConstants.minGapSize, tierGapBase);
+    final baseSpeed = (tierSpeedBase +
+            (tierLevel ~/ GameConstants.levelsPerSpeedIncrease) *
                 GameConstants.speedIncrement)
-        .clamp(GameConstants.initialSpeed, GameConstants.maxSpeed);
+        .clamp(tierSpeedBase, GameConstants.maxSpeed);
     final dirFlip =
         (level ~/ GameConstants.levelsPerDirectionFlip) % 2 == 0 ? 1.0 : -1.0;
 

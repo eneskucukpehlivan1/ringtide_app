@@ -3,6 +3,7 @@ import 'package:share_plus/share_plus.dart';
 import '../game/ringtide_game.dart';
 import '../services/progression_service.dart';
 import '../services/ad_service.dart';
+import '../models/game_theme.dart';
 import '../utils/app_strings.dart';
 
 class GameOverOverlay extends StatefulWidget {
@@ -98,7 +99,10 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     _StatChip(label: S.weeklyBest, value: '${ps.weeklyBest}', theme: theme),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                // Next unlock progress
+                _NextUnlockCard(ps: ps, theme: theme),
+                const SizedBox(height: 16),
                 // Badges
                 if (ps.earnedBadges.isNotEmpty) ...[
                   Center(
@@ -193,6 +197,99 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
       case 'legend': return '🏆';
       default: return '🏅';
     }
+  }
+}
+
+class _NextUnlockCard extends StatelessWidget {
+  final ProgressionService ps;
+  final dynamic theme;
+  const _NextUnlockCard({required this.ps, required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    final next = ps.nextLockedTheme;
+    final isTr = S.isTr == 'tr';
+
+    if (next == null) {
+      return Center(
+        child: Text(
+          S.allThemesUnlocked,
+          style: TextStyle(
+              fontSize: 13,
+              color: (theme.accentColor as Color).withValues(alpha: 0.7),
+              letterSpacing: 1),
+        ),
+      );
+    }
+
+    final current = ps.totalScore;
+    final target = next.unlockScore;
+    // Find previous tier's score (for meaningful progress bar start)
+    final prevScore = _prevThresholdScore(next);
+    final range = (target - prevScore).toDouble();
+    final progress = range > 0 ? ((current - prevScore) / range).clamp(0.0, 1.0) : 1.0;
+    final remaining = (target - current).clamp(0, target);
+    final themeName = isTr ? next.nameTr : next.nameEn;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: (theme.ringColor as Color).withValues(alpha: 0.3)),
+        color: (theme.ringColor as Color).withValues(alpha: 0.07),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                S.nextUnlockLabel,
+                style: TextStyle(
+                    fontSize: 10,
+                    color: (theme.accentColor as Color).withValues(alpha: 0.55),
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.w700),
+              ),
+              Text(
+                '${next.emoji} $themeName',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: theme.accentColor as Color),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor:
+                  (theme.ringColor as Color).withValues(alpha: 0.15),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                  theme.accentColor as Color),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            S.nextUnlockProgress(themeName, remaining),
+            style: TextStyle(
+                fontSize: 12,
+                color: (theme.accentColor as Color).withValues(alpha: 0.65)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _prevThresholdScore(GameTheme next) {
+    final idx = kThemes.indexWhere((t) => t.id == next.id);
+    if (idx <= 0) return 0;
+    return kThemes[idx - 1].unlockScore;
   }
 }
 

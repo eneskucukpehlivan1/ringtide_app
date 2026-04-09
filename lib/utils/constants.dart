@@ -34,6 +34,17 @@ class GameConstants {
   // Aim lane
   static const double aimLaunchAngle = -pi / 2; // straight up, 12 o'clock
 
+  // Per-tier difficulty reset (when ring count increases, start easier again)
+  // Tier 1: 1 ring  (levels 1–11)
+  static const double tier1SpeedBase = 2.4;
+  static const double tier1GapBase   = 0.90;
+  // Tier 2: 2 rings (levels 12–24)  — wider gap, slower speed at tier entry
+  static const double tier2SpeedBase = 1.9;
+  static const double tier2GapBase   = 1.10;
+  // Tier 3: 3 rings (levels 25+)
+  static const double tier3SpeedBase = 1.6;
+  static const double tier3GapBase   = 1.20;
+
   // Ads
   static const int interstitialEvery = 3;
 }

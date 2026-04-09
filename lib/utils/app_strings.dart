@@ -91,6 +91,14 @@ class S {
   // Badges
   static String get newBadge => _tr ? 'YENİ ROZET' : 'NEW BADGE';
 
+  // Next unlock progress
+  static String nextUnlockProgress(String themeName, int remaining) => _tr
+      ? '$themeName için $remaining puan daha'
+      : '$remaining pts to unlock $themeName';
+  static String get nextUnlockLabel =>
+      _tr ? 'SIRADAKI TEMA' : 'NEXT THEME';
+  static String get isTr => _tr ? 'tr' : 'en'; // locale helper for widgets
+
   // Share
   static String shareText(int score, int level, int combo) => _tr
       ? '🌀 Ringtide\'da $score puan yaptım!\nSeviye: $level | En uzun kombo: $combo\nSen de dene! 👆'
