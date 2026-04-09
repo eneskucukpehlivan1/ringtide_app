@@ -41,6 +41,12 @@ class RingComponent extends PositionComponent {
     _pulseTimer += dt;
   }
 
+  /// 0–1: how close the gap is to the aim angle right now.
+  double get proximityToAim {
+    final diff = _angleDiff(_gapAngle, GameConstants.aimLaunchAngle).abs();
+    return (1 - (diff / pi)).clamp(0.0, 1.0);
+  }
+
   /// Called when ball arrives at this ring's radius.
   /// Returns true if ball passes through the gap.
   bool isBallAligned() {

@@ -110,15 +110,35 @@ class RingtideGame extends FlameGame with TapCallbacks {
 
     for (int i = 0; i < numRings; i++) {
       final radius = _baseRadius() + i * 28.0;
-      // Alternate ring directions for multi-ring challenge
-      final ringSpeed = baseSpeed *
-          (i == 0 ? 1.0 : (i.isEven ? 0.85 : -0.9)) *
-          dirFlip;
+
+      // Outer rings rotate MUCH slower so their gaps stay near the aim angle
+      // long enough for the player to time the inner (fast) ring.
+      // Ring 0 = inner = full speed (main challenge)
+      // Ring 1 = middle = 28% speed, same direction
+      // Ring 2 = outer  = 17% speed, opposite direction (visual variety)
+      final double speedMult;
+      final double dirMult;
+      if (i == 0) {
+        speedMult = 1.0;
+        dirMult = dirFlip;
+      } else if (i == 1) {
+        speedMult = 0.28;
+        dirMult = dirFlip;
+      } else {
+        speedMult = 0.17;
+        dirMult = -dirFlip;
+      }
+
+      // Outer rings also get a wider gap so alignment windows are generous
+      final ringGap = i == 0
+          ? gap
+          : (gap + 0.30 * i).clamp(gap, GameConstants.tier1GapBase + 0.4);
+
       final ring = RingComponent(
         center: center,
         radius: radius,
-        gapSize: gap,
-        speed: ringSpeed,
+        gapSize: ringGap,
+        speed: baseSpeed * speedMult * dirMult,
         color: activeTheme.ringColor,
       );
       _rings.add(ring);
@@ -135,6 +155,15 @@ class RingtideGame extends FlameGame with TapCallbacks {
     super.update(dt);
     if (phase != GamePhase.playing) return;
     _orb.updateCombo(combo);
+
+    // Combined alignment: min proximity across all rings.
+    // When all gaps are near the aim angle, aim lane glows.
+    if (_rings.isNotEmpty) {
+      final combined = _rings
+          .map((r) => r.proximityToAim)
+          .reduce((a, b) => a < b ? a : b);
+      _aimLane.alignment = combined;
+    }
   }
 
   // ── Input ──────────────────────────────────────────────────────────────────
