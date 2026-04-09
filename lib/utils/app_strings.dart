@@ -91,6 +91,13 @@ class S {
   // Badges
   static String get newBadge => _tr ? 'YENİ ROZET' : 'NEW BADGE';
 
+  // Ring countdown HUD
+  static String ringCountdown(int n) =>
+      _tr ? '$n seviye' : '$n lvls';
+  static String get ringMax => _tr ? 'MAX' : 'MAX';
+  static String get ringCountdownLabel =>
+      _tr ? 'sonraki halka' : 'next ring';
+
   // Next unlock progress
   static String nextUnlockProgress(String themeName, int remaining) => _tr
       ? '$themeName için $remaining puan daha'
