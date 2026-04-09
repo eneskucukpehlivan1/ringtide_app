@@ -64,6 +64,9 @@ class RingComponent extends PositionComponent {
 
   @override
   void render(Canvas canvas) {
+    // Shift origin to center of bounding box (Flame anchor doesn't do this in render)
+    canvas.translate(size.x / 2, size.y / 2);
+
     final flashIntensity = (_flashTimer / 0.18).clamp(0.0, 1.0);
     final pulse = 0.85 + 0.15 * sin(_pulseTimer * 1.8);
     final effectiveColor = Color.lerp(color, Colors.white, flashIntensity * 0.6)!;

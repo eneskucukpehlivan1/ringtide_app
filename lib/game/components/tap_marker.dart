@@ -11,19 +11,22 @@ class TapMarker extends PositionComponent {
 
   @override
   void render(Canvas canvas) {
+    // Shift origin to center of bounding box (Flame anchor doesn't do this in render)
+    canvas.translate(size.x / 2, size.y / 2);
+
     final glow = 0.3 + proximity * 0.7;
     final scale = 1.0 + proximity * 0.3;
-    final size = GameConstants.markerSize * scale;
+    final markerSize = GameConstants.markerSize * scale;
 
     // Glow
     final glowPaint = Paint()
       ..color = color.withValues(alpha: 0.4 * glow)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    _drawTriangle(canvas, size * 1.5, glowPaint);
+    _drawTriangle(canvas, markerSize * 1.5, glowPaint);
 
     // Triangle body (pointing down toward ring)
     final paint = Paint()..color = color.withValues(alpha: 0.9 * glow);
-    _drawTriangle(canvas, size, paint);
+    _drawTriangle(canvas, markerSize, paint);
   }
 
   void _drawTriangle(Canvas canvas, double s, Paint paint) {

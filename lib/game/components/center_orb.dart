@@ -20,6 +20,9 @@ class CenterOrb extends PositionComponent {
 
   @override
   void render(Canvas canvas) {
+    // Shift origin to center of bounding box (Flame anchor doesn't do this in render)
+    canvas.translate(size.x / 2, size.y / 2);
+
     final pulseFactor = 0.85 + 0.15 * sin(_pulse);
     final radius = (6.0 + _combo * 0.5).clamp(6.0, 12.0) * pulseFactor;
 
