@@ -50,7 +50,7 @@ class RingtideGame extends FlameGame with TapCallbacks {
     _aimLane = TapMarker(
       center: size / 2,
       color: activeTheme.accentColor,
-      outerRadius: _outerRadius(1),
+      outerRadius: _baseRadius(),
     );
     await add(_aimLane);
 
@@ -60,93 +60,30 @@ class RingtideGame extends FlameGame with TapCallbacks {
 
   // ── Ring management ────────────────────────────────────────────────────────
 
-  int _ringCount() {
-    if (level >= 25) return 3;
-    if (level >= 12) return 2;
-    return 1;
-  }
-
   double _baseRadius() => size.x * GameConstants.ringRadiusRatio;
-
-  double _outerRadius(int numRings) =>
-      _baseRadius() + (numRings - 1) * 28.0;
 
   void _buildRings() {
     for (final r in _rings) { r.removeFromParent(); }
     _rings.clear();
 
-    final center = size / 2;
-    final numRings = _ringCount();
-
-    // Each ring-count tier resets to easier values then ramps up independently.
-    // This way adding a ring feels like a fresh challenge, not a wall.
-    final int tierLevel;
-    final double tierGapBase;
-    final double tierSpeedBase;
-
-    if (numRings == 3) {
-      tierLevel   = level - 25;
-      tierGapBase   = GameConstants.tier3GapBase;
-      tierSpeedBase = GameConstants.tier3SpeedBase;
-    } else if (numRings == 2) {
-      tierLevel   = level - 12;
-      tierGapBase   = GameConstants.tier2GapBase;
-      tierSpeedBase = GameConstants.tier2SpeedBase;
-    } else {
-      tierLevel   = level - 1;
-      tierGapBase   = GameConstants.tier1GapBase;
-      tierSpeedBase = GameConstants.tier1SpeedBase;
-    }
-
-    final gap = (tierGapBase -
-            (tierLevel ~/ GameConstants.levelsPerGapDecrement) *
-                GameConstants.gapDecrement)
-        .clamp(GameConstants.minGapSize, tierGapBase);
-    final baseSpeed = (tierSpeedBase +
-            (tierLevel ~/ GameConstants.levelsPerSpeedIncrease) *
-                GameConstants.speedIncrement)
-        .clamp(tierSpeedBase, GameConstants.maxSpeed);
-    final dirFlip =
+    final gapCount = GameConstants.gapCountForLevel(level);
+    final gapSize  = GameConstants.gapSizeForLevel(level);
+    final speed    = GameConstants.speedForLevel(level);
+    final dirFlip  =
         (level ~/ GameConstants.levelsPerDirectionFlip) % 2 == 0 ? 1.0 : -1.0;
 
-    for (int i = 0; i < numRings; i++) {
-      final radius = _baseRadius() + i * 28.0;
+    final ring = RingComponent(
+      center: size / 2,
+      radius: _baseRadius(),
+      gapSize: gapSize,
+      gapCount: gapCount,
+      speed: speed * dirFlip,
+      color: activeTheme.ringColor,
+    );
+    _rings.add(ring);
+    add(ring);
 
-      // Outer rings rotate MUCH slower so their gaps stay near the aim angle
-      // long enough for the player to time the inner (fast) ring.
-      // Ring 0 = inner = full speed (main challenge)
-      // Ring 1 = middle = 28% speed, same direction
-      // Ring 2 = outer  = 17% speed, opposite direction (visual variety)
-      final double speedMult;
-      final double dirMult;
-      if (i == 0) {
-        speedMult = 1.0;
-        dirMult = dirFlip;
-      } else if (i == 1) {
-        speedMult = 0.28;
-        dirMult = dirFlip;
-      } else {
-        speedMult = 0.17;
-        dirMult = -dirFlip;
-      }
-
-      // Outer rings also get a wider gap so alignment windows are generous
-      final ringGap = i == 0
-          ? gap
-          : (gap + 0.30 * i).clamp(gap, GameConstants.tier1GapBase + 0.4);
-
-      final ring = RingComponent(
-        center: center,
-        radius: radius,
-        gapSize: ringGap,
-        speed: baseSpeed * speedMult * dirMult,
-        color: activeTheme.ringColor,
-      );
-      _rings.add(ring);
-      add(ring);
-    }
-
-    _aimLane.updateRadius(_outerRadius(numRings));
+    _aimLane.updateRadius(_baseRadius());
   }
 
   // ── Update ─────────────────────────────────────────────────────────────────
@@ -156,7 +93,6 @@ class RingtideGame extends FlameGame with TapCallbacks {
     super.update(dt);
     if (phase != GamePhase.playing) return;
     _orb.updateCombo(combo);
-
   }
 
   // ── Input ──────────────────────────────────────────────────────────────────
@@ -212,7 +148,6 @@ class RingtideGame extends FlameGame with TapCallbacks {
     combo++;
     if (combo > maxCombo) maxCombo = combo;
 
-    // Flash rings
     for (final ring in _rings) { ring.flash(); }
 
     int gained;
@@ -253,7 +188,7 @@ class RingtideGame extends FlameGame with TapCallbacks {
     if (perfect || combo >= 2) {
       final label = combo >= 2 ? '🔥 x$combo' : 'PERFECT!';
       add(PerfectLabel(
-        position: Vector2(center.x, center.y - _outerRadius(_ringCount()) - 50),
+        position: Vector2(center.x, center.y - _baseRadius() - 50),
         text: label,
         color: activeTheme.accentColor,
       ));

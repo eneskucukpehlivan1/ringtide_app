@@ -3,12 +3,11 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 
-enum TapResult { miss, success, perfect }
-
 class RingComponent extends PositionComponent {
-  double _gapAngle; // center of gap, current angle
+  double _gapAngle; // rotation angle of the first gap center
   double gapSize;
-  double speed; // rad/s, sign = direction
+  int gapCount;    // number of evenly-spaced gaps
+  double speed;    // rad/s, sign = direction
   Color color;
 
   double _flashTimer = 0;
@@ -18,9 +17,10 @@ class RingComponent extends PositionComponent {
     required Vector2 center,
     required double radius,
     required this.gapSize,
+    required this.gapCount,
     required this.speed,
     required this.color,
-  })  : _gapAngle = -pi / 2 + pi / 4, // start gap slightly off marker
+  })  : _gapAngle = -pi / 2 + pi / 4,
         super(
           position: center,
           size: Vector2.all(radius * 2 + 40),
@@ -36,26 +36,41 @@ class RingComponent extends PositionComponent {
   void update(double dt) {
     super.update(dt);
     _gapAngle += speed * dt;
-
     if (_flashTimer > 0) _flashTimer -= dt;
     _pulseTimer += dt;
   }
 
-  /// 0–1: how close the gap is to the aim angle right now.
+  /// Proximity of closest gap to the aim angle (0–1).
   double get proximityToAim {
-    final diff = _angleDiff(_gapAngle, GameConstants.aimLaunchAngle).abs();
-    return (1 - (diff / pi)).clamp(0.0, 1.0);
+    double best = 0;
+    final spacing = 2 * pi / gapCount;
+    for (int i = 0; i < gapCount; i++) {
+      final gapCenter = _gapAngle + i * spacing;
+      final diff = _angleDiff(gapCenter, GameConstants.aimLaunchAngle).abs();
+      final p = (1 - (diff / pi)).clamp(0.0, 1.0);
+      if (p > best) best = p;
+    }
+    return best;
   }
 
-  /// Returns true if ball travelling at [ballAngle] passes through the gap.
+  /// True if ball travelling at [ballAngle] passes through any gap.
   bool isBallAligned(double ballAngle) {
-    final diff = _angleDiff(_gapAngle, ballAngle);
-    return diff.abs() < gapSize / 2;
+    final spacing = 2 * pi / gapCount;
+    for (int i = 0; i < gapCount; i++) {
+      final gapCenter = _gapAngle + i * spacing;
+      if (_angleDiff(gapCenter, ballAngle).abs() < gapSize / 2) return true;
+    }
+    return false;
   }
 
+  /// True if ball is perfectly centred in any gap.
   bool isBallPerfect(double ballAngle) {
-    final diff = _angleDiff(_gapAngle, ballAngle);
-    return diff.abs() < GameConstants.perfectThreshold;
+    final spacing = 2 * pi / gapCount;
+    for (int i = 0; i < gapCount; i++) {
+      final gapCenter = _gapAngle + i * spacing;
+      if (_angleDiff(gapCenter, ballAngle).abs() < GameConstants.perfectThreshold) return true;
+    }
+    return false;
   }
 
   void flash() => _flashTimer = 0.18;
@@ -69,7 +84,6 @@ class RingComponent extends PositionComponent {
 
   @override
   void render(Canvas canvas) {
-    // Shift origin to center of bounding box (Flame anchor doesn't do this in render)
     canvas.translate(size.x / 2, size.y / 2);
 
     final flashIntensity = (_flashTimer / 0.18).clamp(0.0, 1.0);
@@ -77,28 +91,33 @@ class RingComponent extends PositionComponent {
     final effectiveColor = Color.lerp(color, Colors.white, flashIntensity * 0.6)!;
 
     final rect = Rect.fromCircle(center: Offset.zero, radius: _radius);
-    final arcStart = _gapAngle + gapSize / 2;
-    final arcSweep = 2 * pi - gapSize;
+    final spacing = 2 * pi / gapCount;
+    // Each arc fills the space between two adjacent gap edges
+    final arcSweep = (spacing - gapSize).clamp(0.01, spacing);
 
-    // Outer glow
     final glowPaint = Paint()
       ..color = effectiveColor.withValues(alpha: 0.25 * pulse)
       ..style = PaintingStyle.stroke
       ..strokeWidth = GameConstants.ringStrokeWidth + 10
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, GameConstants.glowBlur);
-    canvas.drawArc(rect, arcStart, arcSweep, false, glowPaint);
 
-    // Ring body
     final ringPaint = Paint()
       ..color = effectiveColor.withValues(alpha: 0.95)
       ..style = PaintingStyle.stroke
       ..strokeWidth = GameConstants.ringStrokeWidth
       ..strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, arcStart, arcSweep, false, ringPaint);
 
-    // Gap edge highlights (small dots at gap edges)
-    _drawGapEdge(canvas, _gapAngle - gapSize / 2, effectiveColor);
-    _drawGapEdge(canvas, _gapAngle + gapSize / 2, effectiveColor);
+    for (int i = 0; i < gapCount; i++) {
+      final gapCenter = _gapAngle + i * spacing;
+      final arcStart = gapCenter + gapSize / 2;
+
+      canvas.drawArc(rect, arcStart, arcSweep, false, glowPaint);
+      canvas.drawArc(rect, arcStart, arcSweep, false, ringPaint);
+
+      // Gap edge highlights
+      _drawGapEdge(canvas, gapCenter - gapSize / 2, effectiveColor);
+      _drawGapEdge(canvas, gapCenter + gapSize / 2, effectiveColor);
+    }
   }
 
   void _drawGapEdge(Canvas canvas, double angle, Color c) {

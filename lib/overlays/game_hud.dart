@@ -2,31 +2,32 @@ import 'package:flutter/material.dart';
 import '../game/ringtide_game.dart';
 import '../services/progression_service.dart';
 import '../utils/app_strings.dart';
+import '../utils/constants.dart';
 
 class GameHUD extends StatelessWidget {
   final RingtideGame game;
   const GameHUD({super.key, required this.game});
 
-  /// Levels remaining until next ring tier (0 = already at max).
-  int _levelsToNextRing(int level) {
-    if (level < 12) return 12 - level;
-    if (level < 25) return 25 - level;
+  /// Levels remaining until gap count drops (0 = already at 1 gap).
+  int _levelsToFewerGaps(int level) {
+    if (level < GameConstants.gapCount3Threshold) {
+      return GameConstants.gapCount3Threshold - level;
+    }
+    if (level < GameConstants.gapCount2Threshold) {
+      return GameConstants.gapCount2Threshold - level;
+    }
+    if (level < GameConstants.gapCount1Threshold) {
+      return GameConstants.gapCount1Threshold - level;
+    }
     return 0;
-  }
-
-  /// How many rings are active right now.
-  int _ringCount(int level) {
-    if (level >= 25) return 3;
-    if (level >= 12) return 2;
-    return 1;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = ProgressionService.instance.activeTheme;
-    final rings = _ringCount(game.level);
-    final toNext = _levelsToNextRing(game.level);
-    final isMax = rings >= 3;
+    final gapCount = GameConstants.gapCountForLevel(game.level);
+    final toNext = _levelsToFewerGaps(game.level);
+    final isHardest = gapCount <= 1;
 
     return IgnorePointer(
       child: SafeArea(
@@ -97,11 +98,11 @@ class GameHUD extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              // Bottom: ring-count countdown
-              _RingCountdown(
-                rings: rings,
+              // Bottom: gap countdown
+              _GapCountdown(
+                gapCount: gapCount,
                 levelsLeft: toNext,
-                isMax: isMax,
+                isHardest: isHardest,
                 color: theme.accentColor,
                 ringColor: theme.ringColor,
                 glowColor: theme.glowColor,
@@ -115,18 +116,18 @@ class GameHUD extends StatelessWidget {
   }
 }
 
-class _RingCountdown extends StatelessWidget {
-  final int rings;
+class _GapCountdown extends StatelessWidget {
+  final int gapCount;
   final int levelsLeft;
-  final bool isMax;
+  final bool isHardest;
   final Color color;
   final Color ringColor;
   final Color glowColor;
 
-  const _RingCountdown({
-    required this.rings,
+  const _GapCountdown({
+    required this.gapCount,
     required this.levelsLeft,
-    required this.isMax,
+    required this.isHardest,
     required this.color,
     required this.ringColor,
     required this.glowColor,
@@ -137,21 +138,20 @@ class _RingCountdown extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Ring dots: filled = active, hollow = locked
-        for (int i = 1; i <= 3; i++)
+        // 4 gap dots: filled = active gaps, hollow = removed
+        for (int i = 4; i >= 1; i--)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: _RingDot(
-              active: i <= rings,
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: _GapDot(
+              active: i <= gapCount,
               color: color,
               glowColor: glowColor,
             ),
           ),
         const SizedBox(width: 10),
-        // Countdown text or MAX
-        if (isMax)
+        if (isHardest)
           Text(
-            S.ringMax,
+            S.ringMax, // "HARD" / "ZOR"
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
@@ -175,7 +175,7 @@ class _RingCountdown extends StatelessWidget {
                 ),
               ),
               Text(
-                S.ringCountdownLabel,
+                S.gapCountdownLabel,
                 style: TextStyle(
                   fontSize: 9,
                   color: color.withValues(alpha: 0.45),
@@ -189,23 +189,23 @@ class _RingCountdown extends StatelessWidget {
   }
 }
 
-class _RingDot extends StatelessWidget {
+class _GapDot extends StatelessWidget {
   final bool active;
   final Color color;
   final Color glowColor;
-  const _RingDot(
+  const _GapDot(
       {required this.active, required this.color, required this.glowColor});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 14,
-      height: 14,
+      width: 10,
+      height: 10,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: active ? color.withValues(alpha: 0.9) : Colors.transparent,
         border: Border.all(
-          color: active ? color : color.withValues(alpha: 0.25),
+          color: active ? color : color.withValues(alpha: 0.20),
           width: 1.5,
         ),
         boxShadow: active
