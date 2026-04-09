@@ -54,7 +54,7 @@ class RingtideGame extends FlameGame with TapCallbacks {
     );
     await add(_aimLane);
 
-    _buildRings();
+    _createRing();
     overlays.add('MainMenu');
   }
 
@@ -62,28 +62,38 @@ class RingtideGame extends FlameGame with TapCallbacks {
 
   double _baseRadius() => size.x * GameConstants.ringRadiusRatio;
 
-  void _buildRings() {
+  /// Creates the ring for the first time (call once from onLoad / reset).
+  void _createRing() {
     for (final r in _rings) { r.removeFromParent(); }
     _rings.clear();
-
-    final gapCount = GameConstants.gapCountForLevel(level);
-    final gapSize  = GameConstants.gapSizeForLevel(level);
-    final speed    = GameConstants.speedForLevel(level);
-    final dirFlip  =
-        (level ~/ GameConstants.levelsPerDirectionFlip) % 2 == 0 ? 1.0 : -1.0;
 
     final ring = RingComponent(
       center: size / 2,
       radius: _baseRadius(),
-      gapSize: gapSize,
-      gapCount: gapCount,
-      speed: speed * dirFlip,
+      gapSize: GameConstants.gapSizeForLevel(level),
+      gapCount: GameConstants.gapCountForLevel(level),
+      speed: _ringSpeed(),
       color: activeTheme.ringColor,
     );
     _rings.add(ring);
     add(ring);
-
     _aimLane.updateRadius(_baseRadius());
+  }
+
+  /// Updates ring difficulty in-place — rotation keeps going uninterrupted.
+  void _updateRing() {
+    if (_rings.isEmpty) return;
+    _rings.first.configure(
+      newGapSize:  GameConstants.gapSizeForLevel(level),
+      newGapCount: GameConstants.gapCountForLevel(level),
+      newSpeed:    _ringSpeed(),
+    );
+  }
+
+  double _ringSpeed() {
+    final dirFlip =
+        (level ~/ GameConstants.levelsPerDirectionFlip) % 2 == 0 ? 1.0 : -1.0;
+    return GameConstants.speedForLevel(level) * dirFlip;
   }
 
   // ── Update ─────────────────────────────────────────────────────────────────
@@ -168,7 +178,7 @@ class RingtideGame extends FlameGame with TapCallbacks {
     final newLevel = (score ~/ 50) + 1;
     if (newLevel > level) {
       level = newLevel;
-      _buildRings();
+      _updateRing();
     }
 
     overlays.remove('GameHUD');
@@ -211,7 +221,7 @@ class RingtideGame extends FlameGame with TapCallbacks {
     _resetState();
     _canContinue = true;
     _usedContinue = false;
-    _buildRings();
+    _createRing();
     AudioService.startBgm();
 
     if (ProgressionService.instance.tutorialSeen) {
@@ -251,7 +261,7 @@ class RingtideGame extends FlameGame with TapCallbacks {
     overlays.remove('GameOver');
     _resetState();
     _canContinue = !_usedContinue;
-    _buildRings();
+    _createRing();
     phase = GamePhase.playing;
     overlays.add('GameHUD');
   }
@@ -274,7 +284,7 @@ class RingtideGame extends FlameGame with TapCallbacks {
     AudioService.stopBgm();
     _resetState();
     phase = GamePhase.menu;
-    _buildRings();
+    _createRing();
     overlays.add('MainMenu');
   }
 

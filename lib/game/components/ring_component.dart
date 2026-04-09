@@ -73,6 +73,14 @@ class RingComponent extends PositionComponent {
     return false;
   }
 
+  /// Update difficulty parameters without recreating the component.
+  void configure({required double newGapSize, required int newGapCount, required double newSpeed}) {
+    gapSize  = newGapSize;
+    gapCount = newGapCount;
+    speed    = newSpeed;
+    size     = Vector2.all(_radius * 2 + 40); // stays same but explicit
+  }
+
   void flash() => _flashTimer = 0.18;
 
   double _angleDiff(double a, double b) {
