@@ -1,11 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../game/ringtide_game.dart';
+import '../services/ad_service.dart';
 import '../services/progression_service.dart';
 import '../utils/app_strings.dart';
 
-class MainMenuOverlay extends StatelessWidget {
+class MainMenuOverlay extends StatefulWidget {
   final RingtideGame game;
   const MainMenuOverlay({super.key, required this.game});
+
+  @override
+  State<MainMenuOverlay> createState() => _MainMenuOverlayState();
+}
+
+class _MainMenuOverlayState extends State<MainMenuOverlay> {
+  BannerAd? _bannerAd;
+  bool _bannerLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final ad = AdService.instance.bannerAd;
+    if (ad != null) {
+      _bannerAd = ad;
+      _bannerLoaded = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,136 +35,152 @@ class MainMenuOverlay extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const Spacer(flex: 2),
-            // Logo / Title
-            Column(
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: theme.ringColor.withValues(alpha: 0.8), width: 3),
-                    boxShadow: [BoxShadow(color: theme.glowColor.withValues(alpha: 0.4), blurRadius: 24, spreadRadius: 4)],
-                    color: theme.bgDark,
+      body: Column(
+        children: [
+          Expanded(
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  const Spacer(flex: 2),
+                  // Logo / Title
+                  Column(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: theme.ringColor.withValues(alpha: 0.8), width: 3),
+                          boxShadow: [BoxShadow(color: theme.glowColor.withValues(alpha: 0.4), blurRadius: 24, spreadRadius: 4)],
+                          color: theme.bgDark,
+                        ),
+                        child: Center(
+                          child: Icon(Icons.radio_button_unchecked, color: theme.ringColor, size: 48),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'RINGTIDE',
+                        style: TextStyle(
+                          fontSize: 38,
+                          fontWeight: FontWeight.w900,
+                          color: theme.accentColor,
+                          letterSpacing: 8,
+                          shadows: [Shadow(color: theme.glowColor.withValues(alpha: 0.8), blurRadius: 16)],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        S.totalScore(ps.totalScore),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: theme.accentColor.withValues(alpha: 0.7),
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ],
                   ),
-                  child: Center(
-                    child: Icon(Icons.radio_button_unchecked, color: theme.ringColor, size: 48),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'RINGTIDE',
-                  style: TextStyle(
-                    fontSize: 38,
-                    fontWeight: FontWeight.w900,
-                    color: theme.accentColor,
-                    letterSpacing: 8,
-                    shadows: [Shadow(color: theme.glowColor.withValues(alpha: 0.8), blurRadius: 16)],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  S.totalScore(ps.totalScore),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: theme.accentColor.withValues(alpha: 0.7),
-                    letterSpacing: 2,
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(flex: 1),
-            // Daily challenge card
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                decoration: BoxDecoration(
-                  border: Border.all(color: theme.ringColor.withValues(alpha: 0.3), width: 1),
-                  borderRadius: BorderRadius.circular(16),
-                  color: theme.bgLight.withValues(alpha: 0.6),
-                ),
-                child: Row(
-                  children: [
-                    Text('🎯', style: const TextStyle(fontSize: 20)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  const Spacer(flex: 1),
+                  // Daily challenge card
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: theme.ringColor.withValues(alpha: 0.3), width: 1),
+                        borderRadius: BorderRadius.circular(16),
+                        color: theme.bgLight.withValues(alpha: 0.6),
+                      ),
+                      child: Row(
                         children: [
-                          Text(S.daily,
-                              style: TextStyle(
-                                  fontSize: 11, color: theme.accentColor, fontWeight: FontWeight.w700, letterSpacing: 2)),
-                          const SizedBox(height: 2),
-                          Text(
-                            ps.dailyChallengeCompleted ? S.dailyDone : S.dailyChallengeDesc(daily),
-                            style: TextStyle(
-                                fontSize: 13,
-                                color: ps.dailyChallengeCompleted
-                                    ? theme.accentColor
-                                    : theme.accentColor.withValues(alpha: 0.75)),
+                          const Text('🎯', style: TextStyle(fontSize: 20)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(S.daily,
+                                    style: TextStyle(
+                                        fontSize: 11, color: theme.accentColor, fontWeight: FontWeight.w700, letterSpacing: 2)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  ps.dailyChallengeCompleted ? S.dailyDone : S.dailyChallengeDesc(daily),
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      color: ps.dailyChallengeCompleted
+                                          ? theme.accentColor
+                                          : theme.accentColor.withValues(alpha: 0.75)),
+                                ),
+                              ],
+                            ),
                           ),
+                          if (ps.currentStreak > 0)
+                            Text(S.streakDays(ps.currentStreak),
+                                style: TextStyle(fontSize: 12, color: theme.accentColor.withValues(alpha: 0.8))),
                         ],
                       ),
                     ),
-                    if (ps.currentStreak > 0)
-                      Text(S.streakDays(ps.currentStreak),
-                          style: TextStyle(fontSize: 12, color: theme.accentColor.withValues(alpha: 0.8))),
-                  ],
-                ),
-              ),
-            ),
-            const Spacer(flex: 1),
-            // Play button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 48),
-              child: _GlowButton(
-                label: S.play,
-                color: theme.ringColor,
-                glowColor: theme.glowColor,
-                onTap: game.startTutorial,
-                large: true,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Secondary buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 48),
-              child: Row(
-                children: [
-                  Expanded(
+                  ),
+                  const Spacer(flex: 1),
+                  // Play button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 48),
                     child: _GlowButton(
-                      label: '${theme.emoji} ${S.themes}',
-                      color: theme.accentColor,
+                      label: S.play,
+                      color: theme.ringColor,
                       glowColor: theme.glowColor,
-                      onTap: () {
-                        game.overlays.remove('MainMenu');
-                        game.overlays.add('ThemeSelect');
-                      },
+                      onTap: widget.game.startTutorial,
+                      large: true,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _GlowButton(
-                      label: '📊 ${S.stats}',
-                      color: theme.accentColor,
-                      glowColor: theme.glowColor,
-                      onTap: () {
-                        game.overlays.remove('MainMenu');
-                        game.overlays.add('StatsOverlay');
-                      },
+                  const SizedBox(height: 16),
+                  // Secondary buttons
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 48),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _GlowButton(
+                            label: '${theme.emoji} ${S.themes}',
+                            color: theme.accentColor,
+                            glowColor: theme.glowColor,
+                            onTap: () {
+                              widget.game.overlays.remove('MainMenu');
+                              widget.game.overlays.add('ThemeSelect');
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _GlowButton(
+                            label: '📊 ${S.stats}',
+                            color: theme.accentColor,
+                            glowColor: theme.glowColor,
+                            onTap: () {
+                              widget.game.overlays.remove('MainMenu');
+                              widget.game.overlays.add('StatsOverlay');
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  const Spacer(flex: 2),
                 ],
               ),
             ),
-            const Spacer(flex: 2),
-          ],
-        ),
+          ),
+          // Banner ad at bottom
+          if (_bannerLoaded && _bannerAd != null)
+            SafeArea(
+              top: false,
+              child: SizedBox(
+                height: _bannerAd!.size.height.toDouble(),
+                child: AdWidget(ad: _bannerAd!),
+              ),
+            ),
+        ],
       ),
     );
   }
