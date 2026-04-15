@@ -4,10 +4,15 @@ import '../models/badge_definition.dart';
 import '../services/progression_service.dart';
 import '../utils/app_strings.dart';
 
-class StatsOverlay extends StatelessWidget {
+class StatsOverlay extends StatefulWidget {
   final RingtideGame game;
   const StatsOverlay({super.key, required this.game});
 
+  @override
+  State<StatsOverlay> createState() => _StatsOverlayState();
+}
+
+class _StatsOverlayState extends State<StatsOverlay> {
   @override
   Widget build(BuildContext context) {
     final ps = ProgressionService.instance;
@@ -15,55 +20,53 @@ class StatsOverlay extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: theme.bgDark.withValues(alpha: 0.95),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-              child: Row(
+      body: Column(
+        children: [
+          Expanded(
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  GestureDetector(
-                    onTap: () {
-                      game.overlays.remove('StatsOverlay');
-                      game.overlays.add('MainMenu');
-                    },
-                    child: Icon(Icons.arrow_back_ios_new, color: theme.accentColor, size: 20),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            widget.game.overlays.remove('StatsOverlay');
+                            widget.game.overlays.add('MainMenu');
+                          },
+                          child: Icon(Icons.arrow_back_ios_new, color: theme.accentColor, size: 20),
+                        ),
+                        const SizedBox(width: 16),
+                        Text(S.stats,
+                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: theme.accentColor, letterSpacing: 4)),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 16),
-                  Text(S.stats,
-                      style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: theme.accentColor,
-                          letterSpacing: 4)),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _statsGrid(ps, theme),
+                          const SizedBox(height: 24),
+                          Text(S.newBadge,
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: theme.accentColor.withValues(alpha: 0.7), letterSpacing: 3)),
+                          const SizedBox(height: 12),
+                          _badgesSection(ps, theme),
+                          const SizedBox(height: 82),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _statsGrid(ps, theme),
-                    const SizedBox(height: 24),
-                    // Badges section
-                    Text(S.newBadge,
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: theme.accentColor.withValues(alpha: 0.7),
-                            letterSpacing: 3)),
-                    const SizedBox(height: 12),
-                    _badgesSection(ps, theme),
-                    const SizedBox(height: 32),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -101,16 +104,8 @@ class StatsOverlay extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: (theme.accentColor as Color).withValues(alpha: 0.6),
-                      letterSpacing: 1.5)),
-              Text(value,
-                  style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: theme.accentColor as Color)),
+              Text(label, style: TextStyle(fontSize: 11, color: (theme.accentColor as Color).withValues(alpha: 0.6), letterSpacing: 1.5)),
+              Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: theme.accentColor as Color)),
             ],
           ),
         );
@@ -133,36 +128,24 @@ class StatsOverlay extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: earned
-                  ? (theme.ringColor as Color).withValues(alpha: 0.6)
-                  : Colors.white.withValues(alpha: 0.1),
+              color: earned ? (theme.ringColor as Color).withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.1),
             ),
-            color: earned
-                ? (theme.ringColor as Color).withValues(alpha: 0.1)
-                : Colors.white.withValues(alpha: 0.03),
+            color: earned ? (theme.ringColor as Color).withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.03),
           ),
           child: Row(
             children: [
-              Text(_badgeEmoji(b.id),
-                  style: TextStyle(fontSize: 24, color: earned ? null : const Color(0x40FFFFFF))),
+              Text(_badgeEmoji(b.id), style: TextStyle(fontSize: 24, color: earned ? null : const Color(0x40FFFFFF))),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(badgeName,
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: earned
-                                ? (theme.accentColor as Color)
-                                : Colors.white.withValues(alpha: 0.3))),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
+                            color: earned ? (theme.accentColor as Color) : Colors.white.withValues(alpha: 0.3))),
                     Text(badgeDesc,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: earned
-                                ? (theme.accentColor as Color).withValues(alpha: 0.6)
-                                : Colors.white.withValues(alpha: 0.2))),
+                        style: TextStyle(fontSize: 12,
+                            color: earned ? (theme.accentColor as Color).withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.2))),
                   ],
                 ),
               ),

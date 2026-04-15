@@ -15,7 +15,6 @@ class _TutorialHintOverlayState extends State<TutorialHintOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _pulse;
-
   @override
   void initState() {
     super.initState();
@@ -35,13 +34,17 @@ class _TutorialHintOverlayState extends State<TutorialHintOverlay>
   @override
   Widget build(BuildContext context) {
     final theme = ProgressionService.instance.activeTheme;
-    return GestureDetector(
-      onTap: widget.game.startGame,
-      child: Container(
-        color: Colors.transparent,
-        child: SafeArea(
-          child: Column(
-            children: [
+    return Column(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: widget.game.startGame,
+            child: Container(
+              color: Colors.transparent,
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  children: [
               const Spacer(flex: 2),
 
               // Instruction card
@@ -117,11 +120,14 @@ class _TutorialHintOverlayState extends State<TutorialHintOverlay>
                 ),
               ),
 
-              const SizedBox(height: 56),
-            ],
+                  const SizedBox(height: 56),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
+        ),
+      ],
     );
   }
 }

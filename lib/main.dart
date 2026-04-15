@@ -14,6 +14,7 @@ import 'overlays/game_over.dart';
 import 'overlays/tutorial_hint.dart';
 import 'overlays/theme_select.dart';
 import 'overlays/stats_overlay.dart';
+import 'overlays/persistent_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -109,18 +110,23 @@ class _GameScreenState extends State<_GameScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SizedBox.expand(
-        child: GameWidget<RingtideGame>(
-          game: _game,
-          overlayBuilderMap: {
-            'MainMenu': (context, game) => MainMenuOverlay(game: game),
-            'GameHUD': (context, game) => GameHUD(game: game),
-            'GameOver': (context, game) => GameOverOverlay(game: game),
-            'TutorialHint': (context, game) => TutorialHintOverlay(game: game),
-            'ThemeSelect': (context, game) => ThemeSelectOverlay(game: game),
-            'StatsOverlay': (context, game) => StatsOverlay(game: game),
-          },
-        ),
+      body: Stack(
+        children: [
+          SizedBox.expand(
+            child: GameWidget<RingtideGame>(
+              game: _game,
+              overlayBuilderMap: {
+                'MainMenu': (context, game) => MainMenuOverlay(game: game),
+                'GameHUD': (context, game) => GameHUD(game: game),
+                'GameOver': (context, game) => GameOverOverlay(game: game),
+                'TutorialHint': (context, game) => TutorialHintOverlay(game: game),
+                'ThemeSelect': (context, game) => ThemeSelectOverlay(game: game),
+                'StatsOverlay': (context, game) => StatsOverlay(game: game),
+              },
+            ),
+          ),
+          PersistentBanner(adUnitId: AdService.instance.bannerId),
+        ],
       ),
     );
   }

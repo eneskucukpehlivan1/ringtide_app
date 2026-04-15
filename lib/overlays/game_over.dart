@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:share_plus/share_plus.dart';
 import '../game/ringtide_game.dart';
 import '../services/progression_service.dart';
@@ -17,18 +16,11 @@ class GameOverOverlay extends StatefulWidget {
 
 class _GameOverOverlayState extends State<GameOverOverlay> {
   bool _loading = true;
-  BannerAd? _bannerAd;
-  bool _bannerLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _loadResult();
-    final ad = AdService.instance.bannerAd;
-    if (ad != null) {
-      _bannerAd = ad;
-      _bannerLoaded = true;
-    }
   }
 
   Future<void> _loadResult() async {
@@ -50,12 +42,9 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
 
     return Scaffold(
       backgroundColor: theme.bgDark.withValues(alpha: 0.92),
-      body: Column(
-        children: [
-          Expanded(
-            child: SafeArea(
-              bottom: false,
-              child: SingleChildScrollView(
+      body: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
                   child: Column(
@@ -178,23 +167,11 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     ),
                   ],
                 ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
+                const SizedBox(height: 74),
+              ],
             ),
           ),
-          ),
-          // Banner ad at bottom
-          if (_bannerLoaded && _bannerAd != null)
-            SafeArea(
-              top: false,
-              child: SizedBox(
-                height: _bannerAd!.size.height.toDouble(),
-                child: AdWidget(ad: _bannerAd!),
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }

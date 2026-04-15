@@ -22,6 +22,7 @@ class AdService {
   String get _interstitialId => Platform.isIOS ? _interstitialIOS : _interstitialAndroid;
   String get _rewardedId => Platform.isIOS ? _rewardedIOS : _rewardedAndroid;
   String get _bannerId => Platform.isIOS ? _bannerIOS : _bannerAndroid;
+  String get bannerId  => _bannerId;
 
   BannerAd? get bannerAd => _bannerReady ? _bannerAd : null;
 

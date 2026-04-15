@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../game/ringtide_game.dart';
-import '../services/ad_service.dart';
 import '../services/progression_service.dart';
 import '../utils/app_strings.dart';
 
@@ -14,19 +12,6 @@ class MainMenuOverlay extends StatefulWidget {
 }
 
 class _MainMenuOverlayState extends State<MainMenuOverlay> {
-  BannerAd? _bannerAd;
-  bool _bannerLoaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final ad = AdService.instance.bannerAd;
-    if (ad != null) {
-      _bannerAd = ad;
-      _bannerLoaded = true;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final ps = ProgressionService.instance;
@@ -171,15 +156,6 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> {
               ),
             ),
           ),
-          // Banner ad at bottom
-          if (_bannerLoaded && _bannerAd != null)
-            SafeArea(
-              top: false,
-              child: SizedBox(
-                height: _bannerAd!.size.height.toDouble(),
-                child: AdWidget(ad: _bannerAd!),
-              ),
-            ),
         ],
       ),
     );

@@ -20,10 +20,14 @@ class _ThemeSelectOverlayState extends State<ThemeSelectOverlay> {
 
     return Scaffold(
       backgroundColor: activeTheme.bgDark.withValues(alpha: 0.95),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: Column(
+        children: [
+          Expanded(
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
               child: Row(
@@ -79,7 +83,7 @@ class _ThemeSelectOverlayState extends State<ThemeSelectOverlay> {
             ),
             // Sound / Haptics toggles
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 70),
               child: Row(
                 children: [
                   Expanded(child: _Toggle(
@@ -106,8 +110,11 @@ class _ThemeSelectOverlayState extends State<ThemeSelectOverlay> {
                 ],
               ),
             ),
-          ],
-        ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
