@@ -11,25 +11,27 @@ class AdService {
   static const _interstitialIOS     = 'ca-app-pub-4848727887390601/7425715010';
   static const _rewardedAndroid     = 'ca-app-pub-4848727887390601/5320192789';
   static const _rewardedIOS         = 'ca-app-pub-4848727887390601/5320192789';
-  static const _bannerAndroid       = 'ca-app-pub-3940256099942544/6300978111'; // TODO: replace with Android ID
+  static const _bannerAndroid       = 'ca-app-pub-4848727887390601/3800150992';
   static const _bannerIOS           = 'ca-app-pub-4848727887390601/3800150992';
 
   InterstitialAd? _interstitialAd;
-  RewardedAd? _rewardedAd;
-  BannerAd? _bannerAd;
-  bool _bannerReady = false;
+  RewardedAd?     _rewardedAd;
+  int _interstitialRetry = 0;
+  int _rewardedRetry = 0;
+
+  final ValueNotifier<bool> rewardedReady = ValueNotifier(false);
 
   String get _interstitialId => Platform.isIOS ? _interstitialIOS : _interstitialAndroid;
-  String get _rewardedId => Platform.isIOS ? _rewardedIOS : _rewardedAndroid;
-  String get _bannerId => Platform.isIOS ? _bannerIOS : _bannerAndroid;
-  String get bannerId  => _bannerId;
+  String get _rewardedId     => Platform.isIOS ? _rewardedIOS     : _rewardedAndroid;
+  String get _bannerId       => Platform.isIOS ? _bannerIOS       : _bannerAndroid;
+  String get bannerId        => _bannerId;
 
-  BannerAd? get bannerAd => _bannerReady ? _bannerAd : null;
+  bool get isInterstitialReady => _interstitialAd != null;
+  bool get isRewardedReady     => _rewardedAd != null;
 
   void load() {
     _loadInterstitial();
     _loadRewarded();
-    _loadBanner();
   }
 
   void _loadInterstitial() {
@@ -37,27 +39,18 @@ class AdService {
       adUnitId: _interstitialId,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) => _interstitialAd = ad,
-        onAdFailedToLoad: (_) => _interstitialAd = null,
-      ),
-    );
-  }
-
-  void _loadBanner() {
-    _bannerAd = BannerAd(
-      adUnitId: _bannerId,
-      size: AdSize.banner,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (_) => _bannerReady = true,
-        onAdFailedToLoad: (ad, error) {
-          debugPrint('BannerAd failed: $error');
-          ad.dispose();
-          _bannerAd = null;
-          _bannerReady = false;
+        onAdLoaded: (ad) {
+          _interstitialAd = ad;
+          _interstitialRetry = 0;
+        },
+        onAdFailedToLoad: (err) {
+          _interstitialAd = null;
+          _interstitialRetry++;
+          final delay = Duration(seconds: (_interstitialRetry * 15).clamp(15, 120));
+          Future.delayed(delay, _loadInterstitial);
         },
       ),
-    )..load();
+    );
   }
 
   void _loadRewarded() {
@@ -65,8 +58,18 @@ class AdService {
       adUnitId: _rewardedId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) => _rewardedAd = ad,
-        onAdFailedToLoad: (_) => _rewardedAd = null,
+        onAdLoaded: (ad) {
+          _rewardedAd = ad;
+          _rewardedRetry = 0;
+          rewardedReady.value = true;
+        },
+        onAdFailedToLoad: (err) {
+          _rewardedAd = null;
+          rewardedReady.value = false;
+          _rewardedRetry++;
+          final delay = Duration(seconds: (_rewardedRetry * 15).clamp(15, 120));
+          Future.delayed(delay, _loadRewarded);
+        },
       ),
     );
   }
@@ -74,6 +77,7 @@ class AdService {
   Future<void> showInterstitial() async {
     final ad = _interstitialAd;
     if (ad == null) return;
+
     _interstitialAd = null;
     final c = Completer<void>();
     ad.fullScreenContentCallback = FullScreenContentCallback(
@@ -94,11 +98,10 @@ class AdService {
 
   Future<void> showRewarded({required VoidCallback onRewarded}) async {
     final ad = _rewardedAd;
-    if (ad == null) {
-      onRewarded();
-      return;
-    }
+    if (ad == null) return;
+
     _rewardedAd = null;
+    rewardedReady.value = false;
     final c = Completer<void>();
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (a) {
@@ -109,11 +112,10 @@ class AdService {
       onAdFailedToShowFullScreenContent: (a, _) {
         a.dispose();
         _loadRewarded();
-        onRewarded();
         if (!c.isCompleted) c.complete();
       },
     );
-    await ad.show(onUserEarnedReward: (ad, reward) => onRewarded());
+    await ad.show(onUserEarnedReward: (_, __) => onRewarded());
     await c.future;
   }
 }

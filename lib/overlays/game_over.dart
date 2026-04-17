@@ -119,19 +119,27 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                   const SizedBox(height: 16),
                 ],
                 // Continue with ad
-                if (game.canContinue) ...[
-                  _ActionButton(
-                    label: S.watchAdToContinue,
-                    color: theme.glowColor,
-                    borderColor: theme.glowColor,
-                    onTap: () async {
-                      await AdService.instance.showRewarded(
-                        onRewarded: () => game.useContinue(),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                ],
+                ValueListenableBuilder<bool>(
+                  valueListenable: AdService.instance.rewardedReady,
+                  builder: (_, ready, __) {
+                    if (!game.canContinue || !ready) return const SizedBox.shrink();
+                    return Column(
+                      children: [
+                        _ActionButton(
+                          label: S.watchAdToContinue,
+                          color: theme.glowColor,
+                          borderColor: theme.glowColor,
+                          onTap: () async {
+                            await AdService.instance.showRewarded(
+                              onRewarded: () => game.useContinue(),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                    );
+                  },
+                ),
                 // Play Again
                 _ActionButton(
                   label: S.playAgain,

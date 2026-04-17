@@ -320,8 +320,10 @@ class RingtideGame extends FlameGame with TapCallbacks {
     overlays.remove('GameHUD');
     _gamesSinceAd++;
     if (_gamesSinceAd >= GameConstants.interstitialEvery) {
-      _gamesSinceAd = 0;
-      await AdService.instance.showInterstitial();
+      if (AdService.instance.isInterstitialReady) {
+        _gamesSinceAd = 0;
+        await AdService.instance.showInterstitial();
+      }
     }
     await ProgressionService.instance.addGameResult(
       score: score,
