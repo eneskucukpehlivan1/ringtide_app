@@ -7,11 +7,11 @@ class AdService {
   AdService._();
   static final AdService instance = AdService._();
 
-  static const _interstitialAndroid = 'ca-app-pub-4848727887390601/7425715010';
+  static const _interstitialAndroid = 'ca-app-pub-3940256099942544/1033173712'; // test
   static const _interstitialIOS     = 'ca-app-pub-4848727887390601/7425715010';
-  static const _rewardedAndroid     = 'ca-app-pub-4848727887390601/5320192789';
+  static const _rewardedAndroid     = 'ca-app-pub-3940256099942544/5224354917'; // test
   static const _rewardedIOS         = 'ca-app-pub-4848727887390601/5320192789';
-  static const _bannerAndroid       = 'ca-app-pub-4848727887390601/3800150992';
+  static const _bannerAndroid       = 'ca-app-pub-3940256099942544/6300978111'; // test
   static const _bannerIOS           = 'ca-app-pub-4848727887390601/3800150992';
 
   InterstitialAd? _interstitialAd;

@@ -125,7 +125,10 @@ class _GameScreenState extends State<_GameScreen> {
               },
             ),
           ),
-          PersistentBanner(adUnitId: AdService.instance.bannerId),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: PersistentBanner(adUnitId: AdService.instance.bannerId),
+          ),
         ],
       ),
     );

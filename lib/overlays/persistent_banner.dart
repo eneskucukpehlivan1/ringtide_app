@@ -12,67 +12,59 @@ class PersistentBanner extends StatefulWidget {
 
 class _PersistentBannerState extends State<PersistentBanner> {
   BannerAd? _bannerAd;
-  AdSize? _adSize;
   bool _loaded = false;
-  int _retryCount = 0;
+  bool _isLoading = false;
+  int _retryAttempt = 0;
   Timer? _retryTimer;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_adSize == null) {
-      _initAdSize();
-    }
-  }
-
-  Future<void> _initAdSize() async {
-    final width = MediaQuery.of(context).size.width.truncate();
-    final size = await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(width);
-    if (!mounted) return;
-    _adSize = size ?? AdSize.banner;
-    _loadAd();
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) _loadAd();
+    });
   }
 
   void _loadAd() {
-    final size = _adSize;
-    if (size == null) return;
-
-    _bannerAd?.dispose();
-    _bannerAd = null;
+    if (_bannerAd != null || _isLoading) return;
+    _isLoading = true;
 
     _bannerAd = BannerAd(
       adUnitId: widget.adUnitId,
-      size: size,
+      size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (_) {
           if (mounted) {
             setState(() {
               _loaded = true;
-              _retryCount = 0;
+              _isLoading = false;
+              _retryAttempt = 0;
             });
             _retryTimer?.cancel();
           }
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
-          _bannerAd = null;
           if (mounted) {
-            setState(() => _loaded = false);
-            _scheduleRetry();
+            setState(() {
+              _bannerAd = null;
+              _loaded = false;
+              _isLoading = false;
+            });
+            _retryAttempt++;
+            final delaySec = (_retryAttempt <= 5
+                    ? (2 * (1 << (_retryAttempt - 1)))
+                    : 30)
+                .clamp(2, 30);
+            _retryTimer?.cancel();
+            _retryTimer = Timer(Duration(seconds: delaySec), () {
+              if (mounted) _loadAd();
+            });
           }
         },
       ),
     )..load();
-  }
-
-  void _scheduleRetry() {
-    _retryTimer?.cancel();
-    _retryCount++;
-    final delay = (_retryCount * 15).clamp(15, 120);
-    _retryTimer = Timer(Duration(seconds: delay), () {
-      if (mounted && !_loaded) _loadAd();
-    });
   }
 
   @override
@@ -88,8 +80,8 @@ class _PersistentBannerState extends State<PersistentBanner> {
     return SafeArea(
       top: false,
       child: SizedBox(
+        width: _bannerAd!.size.width.toDouble(),
         height: _bannerAd!.size.height.toDouble(),
-        width: double.infinity,
         child: AdWidget(ad: _bannerAd!),
       ),
     );
