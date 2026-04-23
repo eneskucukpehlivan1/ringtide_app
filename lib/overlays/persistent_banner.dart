@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../services/ad_service.dart';
 
 class PersistentBanner extends StatefulWidget {
   final String adUnitId;
@@ -20,14 +21,25 @@ class _PersistentBannerState extends State<PersistentBanner> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) _loadAd();
-    });
+    // SDK zaten hazırsa hemen yükle, değilse sinyali bekle
+    if (AdService.instance.sdkReady.value) {
+      _loadAd();
+    } else {
+      AdService.instance.sdkReady.addListener(_onSdkReady);
+    }
+  }
+
+  void _onSdkReady() {
+    if (AdService.instance.sdkReady.value && mounted) {
+      AdService.instance.sdkReady.removeListener(_onSdkReady);
+      _loadAd();
+    }
   }
 
   void _loadAd() {
     if (_bannerAd != null || _isLoading) return;
     _isLoading = true;
+    debugPrint('[AdInit] Banner yükleniyor: ${widget.adUnitId}');
 
     _bannerAd = BannerAd(
       adUnitId: widget.adUnitId,
@@ -35,6 +47,7 @@ class _PersistentBannerState extends State<PersistentBanner> {
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (_) {
+          debugPrint('[AdInit] Banner yüklendi ✓');
           if (mounted) {
             setState(() {
               _loaded = true;
@@ -45,6 +58,7 @@ class _PersistentBannerState extends State<PersistentBanner> {
           }
         },
         onAdFailedToLoad: (ad, error) {
+          debugPrint('[AdInit] Banner yüklenemedi – code:${error.code} msg:${error.message}');
           ad.dispose();
           if (mounted) {
             setState(() {
@@ -69,6 +83,7 @@ class _PersistentBannerState extends State<PersistentBanner> {
 
   @override
   void dispose() {
+    AdService.instance.sdkReady.removeListener(_onSdkReady);
     _retryTimer?.cancel();
     _bannerAd?.dispose();
     super.dispose();

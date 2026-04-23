@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
@@ -28,49 +30,133 @@ void main() async {
     statusBarBrightness: Brightness.dark,
   ));
 
-  // 1. GDPR / UMP consent
-  final consentCompleter = Completer<void>();
+  // Uygulama servislerini yükle
+  await ProgressionService.instance.init();
+  await AudioService.init();
+
+  runApp(const RingtideApp());
+
+  // UI render olduktan sonra reklam akışını başlat
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _initAdsFlow();
+  });
+}
+
+bool _adsFlowStarted = false;
+
+/// Tüm reklam akışı: UMP consent → ATT (iOS) → MobileAds init → reklam yükle
+Future<void> _initAdsFlow() async {
+  if (_adsFlowStarted) return;
+  _adsFlowStarted = true;
+
+  debugPrint('[AdInit] Reklam akışı başlıyor…');
+
+  // 1) UMP Consent
+  await _requestUMPConsent();
+
+  // 2) ATT (sadece iOS)
+  if (Platform.isIOS) {
+    await _requestATT();
+  }
+
+  // 3) MobileAds initialize
+  debugPrint('[AdInit] MobileAds initialize ediliyor…');
+  final status = await MobileAds.instance.initialize();
+  debugPrint('[AdInit] MobileAds initialized ✓ – adapters: ${status.adapterStatuses.keys.join(', ')}');
+
+  // 4) Consent durumunu logla
+  final consentStatus = await ConsentInformation.instance.getConsentStatus();
+  debugPrint('[AdInit] UMP Consent durumu: $consentStatus');
+
+  // 5) SDK hazır — reklamları yükle
+  AdService.instance.sdkReady.value = true;
+  AdService.instance.load();
+  debugPrint('[AdInit] Reklam akışı tamamlandı ✓');
+}
+
+/// UMP (GDPR) consent akışı — en fazla 15 sn bekler
+Future<void> _requestUMPConsent() async {
+  debugPrint('[AdInit] UMP consent başlatılıyor…');
+  final completer = Completer<void>();
+
   ConsentInformation.instance.requestConsentInfoUpdate(
     ConsentRequestParameters(),
     () async {
-      // On success — show form if required
-      final formAvailable =
-          await ConsentInformation.instance.isConsentFormAvailable();
-      if (formAvailable) {
-        final formCompleter = Completer<void>();
-        await ConsentForm.loadAndShowConsentFormIfRequired((_) {
-          if (!formCompleter.isCompleted) formCompleter.complete();
-        });
-        await formCompleter.future;
+      debugPrint('[AdInit] UMP info güncellendi – form kontrol ediliyor');
+      try {
+        await ConsentForm.loadAndShowConsentFormIfRequired((_) {});
+        debugPrint('[AdInit] UMP form tamamlandı ✓');
+      } catch (e) {
+        debugPrint('[AdInit] UMP form hatası: $e');
       }
-      if (!consentCompleter.isCompleted) consentCompleter.complete();
+      if (!completer.isCompleted) completer.complete();
     },
     (FormError error) {
-      if (!consentCompleter.isCompleted) consentCompleter.complete();
+      debugPrint('[AdInit] UMP Error: ${error.message}');
+      if (!completer.isCompleted) completer.complete();
     },
   );
-  await consentCompleter.future;
 
-  // 2. ATT (iOS) — only if GDPR did not deny
-  final consentStatus = await ConsentInformation.instance.getConsentStatus();
-  if (consentStatus != ConsentStatus.required) {
-    final trackingStatus =
-        await AppTrackingTransparency.trackingAuthorizationStatus;
-    if (trackingStatus == TrackingStatus.notDetermined) {
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      await AppTrackingTransparency.requestTrackingAuthorization();
+  await completer.future.timeout(
+    const Duration(seconds: 15),
+    onTimeout: () {
+      debugPrint('[AdInit] UMP timeout (15s) – devam ediliyor');
+    },
+  );
+}
+
+/// ATT (iOS App Tracking Transparency)
+Future<void> _requestATT() async {
+  try {
+    final currentStatus = await AppTrackingTransparency.trackingAuthorizationStatus;
+    debugPrint('[AdInit] ATT mevcut durum: $currentStatus');
+
+    if (currentStatus != TrackingStatus.notDetermined) {
+      debugPrint('[AdInit] ATT zaten belirlenmiş: $currentStatus');
+      return;
     }
+
+    await _waitForAppActive();
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+
+    debugPrint('[AdInit] ATT dialog gösterilecek…');
+    final newStatus = await AppTrackingTransparency.requestTrackingAuthorization();
+    debugPrint('[AdInit] ATT kullanıcı yanıtı: $newStatus');
+
+    if (newStatus == TrackingStatus.notDetermined) {
+      debugPrint('[AdInit] ATT suppress edildi – 2s sonra tekrar deneniyor…');
+      await Future<void>.delayed(const Duration(seconds: 2));
+      final retryStatus = await AppTrackingTransparency.requestTrackingAuthorization();
+      debugPrint('[AdInit] ATT retry yanıtı: $retryStatus');
+    }
+  } catch (e) {
+    debugPrint('[AdInit] ATT hatası: $e');
   }
+}
 
-  // 3. AdMob
-  await MobileAds.instance.initialize();
+/// Uygulama lifecycle'ı "resumed" olana kadar bekle (max 10 sn)
+Future<void> _waitForAppActive() async {
+  final binding = WidgetsBinding.instance;
+  final state = binding.lifecycleState;
+  
+  if (state == AppLifecycleState.resumed || state == null) return;
 
-  // 4. App services
-  await ProgressionService.instance.init();
-  await AudioService.init();
-  AdService.instance.load();
+  final completer = Completer<void>();
+  late final AppLifecycleListener listener;
 
-  runApp(const RingtideApp());
+  listener = AppLifecycleListener(
+    onResume: () {
+      if (!completer.isCompleted) completer.complete();
+      listener.dispose();
+    },
+  );
+
+  await completer.future.timeout(
+    const Duration(seconds: 10),
+    onTimeout: () {
+      listener.dispose();
+    },
+  );
 }
 
 class RingtideApp extends StatelessWidget {
@@ -97,13 +183,27 @@ class _GameScreen extends StatefulWidget {
   State<_GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<_GameScreen> {
+class _GameScreenState extends State<_GameScreen> with WidgetsBindingObserver {
   late final RingtideGame _game;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _game = RingtideGame();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
